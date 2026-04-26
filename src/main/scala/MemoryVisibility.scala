@@ -3,8 +3,9 @@
 // readyがtrueになったらnumberの値を出力する
 // スレッド間で同期が取れていないため、正しく動くときも正しく動かないときもある
 object MemoryVisibility  extends App{
-  var number = 0
-  var ready = false
+  // --- volatileで可視性を保証する ---
+  @volatile var number = 0
+  @volatile var ready = false
 
   // === 別スレッド ===
   new Thread (() => {
