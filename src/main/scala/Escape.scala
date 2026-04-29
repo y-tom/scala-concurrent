@@ -11,7 +11,8 @@ object Escape extends App{
 
 object EscapeVarSeqProvider {
   // seqフィールドがpublicフィールドになっており、別なスレッドからアクセス可能
-  var seq: Seq[Int] = Seq() // ESCAPE!
+  // seqのアクセス修飾子を private[this] とすることで正しくカプセル化
+  private[this] var seq: Seq[Int] = Seq()
   def next: Seq[Int] = synchronized{
     val nextSeq = seq :+ (seq.size + 1)
     seq = nextSeq
@@ -25,6 +26,8 @@ object EscapeArrayBufferProvider {
     array += (array.size + 1)
     // フィールドのarrayではprivate[this]で他のオブジェクトから参照できないようになっている
     // しかしnextメソッド自身が可変オブジェクトのインスタンスを返している
-    array // ESCAPE!
+    // arrayインスタンスそのものではなく arrayインスタンスのコピーをnextメソッドで返却するようにした
+    // 内部のフィールドの参照が逸出することはないため、スレッドセーフ
+    array.clone
   }
 }
