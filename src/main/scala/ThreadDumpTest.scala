@@ -7,7 +7,7 @@ object ThreadDumpTest extends App {
   // === スレッドプール作成 ===
   // 3スレッドで定期タスクを実行する
   val es = Executors.newScheduledThreadPool(3)
-gi
+
   // === 定期タスク登録 ===
   // 1秒ごとにタスクを実行し続ける（終了しない）
   // scheduleAtFixedRate(タスク, 初回遅延, 間隔, 単位)
