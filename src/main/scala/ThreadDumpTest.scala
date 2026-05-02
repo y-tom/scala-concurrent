@@ -13,7 +13,6 @@ object ThreadDumpTest extends App {
   // scheduleAtFixedRate(タスク, 初回遅延, 間隔, 単位)
   es.scheduleAtFixedRate(() => {
 
-
     // === 実行中スレッドの情報を出力 ===
     // どのスレッドが動いているか確認できる
     println(
