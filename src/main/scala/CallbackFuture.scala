@@ -42,19 +42,14 @@ class FutureSomething {
 
 
 // === Future として使う側 ===
-
 object CallbackFuture extends App {
-
   // === callback処理をFuture化したクラスを使う ===
-
   val futureSomething = new FutureSomething
-
   // doSomething() は Future[Int] を返す
   val iFuture = futureSomething.doSomething()
   val jFuture = futureSomething.doSomething()
 
   // === for式で2つのFutureを組み合わせる ===
-
   // 両方成功したときだけ i + j が作られる
   val iplusj: Future[Int] = for {
     i <- iFuture
@@ -62,10 +57,8 @@ object CallbackFuture extends App {
   } yield i + j
 
   // === 結果を待って表示する ===
-
   // 成功すれば合計値が返る
   // どちらかが失敗すれば RuntimeException が発生する
   val result = Await.result(iplusj, Duration.Inf)
-
   println(result)
 }
