@@ -1,64 +1,81 @@
-import akka.actor.{ActorRef, ActorSystem, Inbox, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.pattern.ask
+import akka.util.Timeout
 
-import scala.concurrent.duration._
 import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 object FaultHandlingStudy extends App {
 
-  // === ActorSystem / Inbox 作成 ===
-  val system = ActorSystem("faultHandlingStudy")
-  val inbox = Inbox.create(system)
-  // ! で送るときの sender を inbox にする
-  implicit val sender = inbox.getRef()
+  // === ask のタイムアウト設定 ===
+  implicit val timeout: Timeout = Timeout(5.seconds)
+  // === ActorSystem 作成 ===
+  implicit val system: ActorSystem =
+    ActorSystem("faultHandlingStudy")
+  // ask 用 ExecutionContext
+  import system.dispatcher
 
   // === Supervisor 作成 ===
-  val supervisor = system.actorOf(Props[Supervisor], "supervisor")
+  val supervisor =
+    system.actorOf(Props[Supervisor](), "supervisor")
 
   // === Child 作成 ===
-  // Supervisor に Props[Child] を送り、子Actorを作ってもらう
-  supervisor ! Props[Child]
-  val child = inbox.receive(5.seconds).asInstanceOf[ActorRef]
+  // Supervisor に Child の Props を送り、 子Actorを生成して返してもらう
+  val child =
+    Await.result(
+      (supervisor ? Props[Child]()).mapTo[ActorRef],
+      5.seconds
+    )
 
   // === 通常動作 ===
+  // state = 42 に更新
   child ! 42
-  child ! "get"
-  println("set state to 42: " + inbox.receive(5.seconds)) // 42
+  // "get" を ask で送り、現在の state を取得
+  println(
+    "set state to 42: " +
+      Await.result(child ? "get", 5.seconds)
+  ) // 42 expected
 
   // === Resume の確認 ===
   // ArithmeticException → Resume
-  // 状態はそのままなので 42
+  // Actorは続行されるので state は保持される
   child ! new ArithmeticException
-  child ! "get"
-  println("crash it: " + inbox.receive(5.seconds)) // 42
+  println(
+    "crash it: " +
+      Await.result(child ? "get", 5.seconds)
+  ) // 42 expected
 
   // === Restart の確認 ===
   // NullPointerException → Restart
-  // Actor が作り直されるので state は 0
+  // Actor が作り直されるので state は 0 に戻る
   child ! new NullPointerException
-  child ! "get"
-  println("crash it harder: " + inbox.receive(5.seconds)) // 0
+  println(
+    "crash it harder: " +
+      Await.result(child ? "get", 5.seconds)
+  ) // 0 expected
 
   // === Stop の確認 ===
   // IllegalArgumentException → Stop
-  // watch しているので Terminated を受け取る
-  inbox.watch(child)
+  // Actor が停止される
   child ! new IllegalArgumentException
-  println("watch and break it: " + inbox.receive(5.seconds))
 
   // === 新しい Child を作成 ===
-  supervisor ! Props[Child]
-  val child2 = inbox.receive(5.seconds).asInstanceOf[ActorRef]
+  val child2 =
+    Await.result(
+      (supervisor ? Props[Child]()).mapTo[ActorRef],
+      5.seconds
+    )
 
-  inbox.watch(child2)
-  child2 ! "get"
-  println("new child: " + inbox.receive(5.seconds)) // 0
+  println(
+    "new child: " +
+      Await.result(child2 ? "get", 5.seconds)
+  ) // 0 expected
 
   // === Escalate の確認 ===
   // Exception → Escalate
-  // 親Actorへ処理を委譲する
+  // Supervisor の親へ処理を委譲
   child2 ! new Exception("CRASH")
-  println("escalate failure: " + inbox.receive(5.seconds))
 
+  // === ActorSystem 終了 ===
   Await.ready(system.terminate(), Duration.Inf)
 }

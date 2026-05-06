@@ -11,7 +11,7 @@ class Supervisor extends Actor {
   // === 障害時の判断ルール（SupervisorStrategy） ===
   override val supervisorStrategy = {
     // 失敗した子Actorだけに命令する戦略 1分間に最大10回までしか再起動しない
-    OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
+    OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange  = 1.minute) {
       // 計算エラー → 続行（状態はそのまま）
       case _: ArithmeticException => Resume
       // Null参照 → 再起動（状態リセット）
